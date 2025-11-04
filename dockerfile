@@ -31,3 +31,4 @@ RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf
 
 # Set proper permissions
 RUN chown -R www-data:www-data /var/www/html
+RUN chmod -R 755 /var/www/html

@@ -17,7 +17,10 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Build stage running"
-                sh 'docker-compose build'
+                sh '''
+                    # Try new docker compose syntax first, fallback to docker-compose
+                    docker compose version && docker compose build || docker-compose build
+                '''
             }
         }
         
@@ -25,8 +28,11 @@ pipeline {
             steps {
                 echo "Test stage running"
                 sh '''
-                    docker-compose up -d
+                    # Start services
+                    docker compose up -d || docker-compose up -d
                     sleep 30
+                    
+                    # Test web service
                     curl -f http://localhost:8080 || exit 1
                 '''
             }
@@ -35,7 +41,10 @@ pipeline {
         stage('Deploy') {
             steps {
                 echo "Deploy stage running"
-                sh 'docker-compose up -d'
+                sh '''
+                    # Ensure services are running
+                    docker compose up -d || docker-compose up -d
+                '''
             }
         }
         
@@ -46,8 +55,9 @@ pipeline {
                     # Test if web service is responding
                     curl -f http://localhost:8080 || exit 1
                     
-                    # Test if database is accessible
-                    docker-compose exec -T 202412345-db mysql -uroot -ppassword -e "SHOW DATABASES;" || exit 1
+                    # Test if database is accessible (wait for DB to be ready)
+                    sleep 10
+                    docker compose exec -T 202412345-db mysql -uroot -ppassword -e "SHOW DATABASES;" || exit 1
                     
                     # Test if phpMyAdmin is accessible
                     curl -f http://localhost:8081 || exit 1
@@ -59,7 +69,9 @@ pipeline {
     post {
         always {
             echo 'Cleaning up...'
-            sh 'docker-compose down'
+            sh '''
+                docker compose down || docker-compose down
+            '''
         }
         success {
             echo 'Pipeline completed successfully!'
